@@ -7,7 +7,7 @@ namespace PasswordSafe.WPF.Views
 {
     public partial class MainWindow : Window
     {
-        private readonly DatabaseService _db;
+        private DatabaseService _db;
         private List<SecretEntry> _entries = new();
         private SecretEntry? _current;
         private ObservableCollection<ExtraData> _currentExtras = new();
@@ -97,9 +97,20 @@ namespace PasswordSafe.WPF.Views
 
         private void ChangePassword_Click(object sender, RoutedEventArgs e)
         {
-            // TODO: открыть отдельное окно для смены пароля
-            MessageBox.Show("Функция смены пароля будет реализована позже");
+            var pwdService = new PasswordService();
+            var resetWindow = new ResetWindow(_db, pwdService)
+            {
+                Owner = this
+            };
+
+            if (resetWindow.ShowDialog() == true)
+            {
+                // Получаем обновлённый DatabaseService с новым ключом
+                _db = resetWindow.UpdatedDb;
+                LoadEntries();
+            }
         }
+
 
         private void ClearFields()
         {

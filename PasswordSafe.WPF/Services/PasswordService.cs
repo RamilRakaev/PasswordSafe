@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 
 namespace PasswordSafe.WPF.Services
 {
-    class PasswordService
+    public class PasswordService
     {
         private readonly string _metaPath = "vault.meta";
 
