@@ -102,8 +102,12 @@ namespace PasswordSafe.WPF.Services
                 Name = _crypto.Encrypt(category.Name)
             };
 
-            if (category.Id == 0) col.Insert(copy);
+            if (category.Id == 0)
+            { 
+                col.Insert(copy); 
+            }
             else col.Update(copy);
+            category.Id = copy.Id;
         }
 
         public void DeleteCategory(int id)

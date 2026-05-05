@@ -34,25 +34,52 @@
                         Orientation="Horizontal" 
                         Margin="0,0,0,5">
                 <Button Content="Категории" Click="ManageCategories_Click" 
-                    Width="100" Margin="2"/>
+                    Width="80" Margin="2"/>
+                <Button Content="Свернуть" Width="80" Margin="2" Click="CollapseAll_Click"/>
+                <Button Content="Развернуть" Width="80" Margin="2" Click="ExpandAll_Click"/>
             </StackPanel>
 
             <ListBox x:Name="EntriesList"
                  DisplayMemberPath="Title"
-                 SelectionChanged="EntriesList_SelectionChanged">
+                 SelectionChanged="EntriesList_SelectionChanged"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.GroupStyle>
                     <GroupStyle>
-                        <GroupStyle.HeaderTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" 
-                               FontWeight="Bold" 
-                               Background="#EEE"
-                               Padding="4"/>
-                            </DataTemplate>
-                        </GroupStyle.HeaderTemplate>
+                        <GroupStyle.ContainerStyle>
+                            <Style TargetType="{x:Type GroupItem}">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="{x:Type GroupItem}">
+                                            <Expander IsExpanded="True"
+                                                  Expanded="Expander_Expanded"
+                                                  Collapsed="Expander_Collapsed"
+                                                  Background="#F5F5F5"
+                                                  BorderBrush="#DDD"
+                                                  BorderThickness="0,0,0,1"
+                                                  Padding="2">
+                                                <Expander.Header>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Name}"
+                                                       FontWeight="Bold"/>
+                                                        <TextBlock Text=" ("
+                                                       Foreground="Gray"/>
+                                                        <TextBlock Text="{Binding ItemCount}"
+                                                       Foreground="Gray"/>
+                                                        <TextBlock Text=")"
+                                                       Foreground="Gray"/>
+                                                    </StackPanel>
+                                                </Expander.Header>
+                                                <ItemsPresenter/>
+                                            </Expander>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </GroupStyle.ContainerStyle>
                     </GroupStyle>
                 </ListBox.GroupStyle>
             </ListBox>
+            
 
         </DockPanel>
 

@@ -3,7 +3,9 @@ using PasswordSafe.WPF.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 
 namespace PasswordSafe.WPF.Views
 {
@@ -19,6 +21,7 @@ namespace PasswordSafe.WPF.Views
             InitializeComponent();
             _db = db;
             LoadEntries();
+            LoadCategories();
 
             // Корректное закрытие БД при выходе
             Closed += (_, _) => _db.Dispose();
@@ -187,11 +190,57 @@ namespace PasswordSafe.WPF.Views
                 CategoryBox.SelectedValue = 0;
         }
 
+        public static Dictionary<string, bool> GroupStates { get; } = new();
+
+        private void Expander_Expanded(object sender, RoutedEventArgs e)
+        {
+            if (sender is Expander ex && ex.DataContext is CollectionViewGroup g)
+                GroupStates[g.Name?.ToString() ?? ""] = true;
+        }
+
+        private void Expander_Collapsed(object sender, RoutedEventArgs e)
+        {
+            if (sender is Expander ex && ex.DataContext is CollectionViewGroup g)
+                GroupStates[g.Name?.ToString() ?? ""] = false;
+        }
+
+        private void Expander_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is Expander ex && ex.DataContext is CollectionViewGroup g)
+            {
+                var key = g.Name?.ToString() ?? "";
+                if (GroupStates.TryGetValue(key, out var expanded))
+                    ex.IsExpanded = expanded;
+            }
+        }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             LoadCategories();
             LoadEntries();
         }
+
+        private void CollapseAll_Click(object sender, RoutedEventArgs e) => SetAllGroups(false);
+        private void ExpandAll_Click(object sender, RoutedEventArgs e) => SetAllGroups(true);
+
+        private void SetAllGroups(bool expanded)
+        {
+            foreach (var ex in FindVisualChildren<Expander>(EntriesList))
+                ex.IsExpanded = expanded;
+        }
+
+        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) yield break;
+            var count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T t) yield return t;
+                foreach (var sub in FindVisualChildren<T>(child))
+                    yield return sub;
+            }
+        }
+
     }
 }

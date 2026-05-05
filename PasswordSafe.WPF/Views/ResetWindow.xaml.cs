@@ -10,10 +10,6 @@ namespace PasswordSafe.WPF.Views
         private readonly PasswordService _pwd;
         private DatabaseService _db;
 
-        /// <summary>
-        /// Возвращает обновлённый DatabaseService после смены пароля,
-        /// чтобы MainWindow мог продолжить работу с новым ключом.
-        /// </summary>
         public DatabaseService UpdatedDb => _db;
 
         public ResetWindow(DatabaseService db, PasswordService pwd)
