@@ -1,7 +1,9 @@
-﻿using System.Collections.ObjectModel;
-using System.Windows;
-using PasswordSafe.WPF.Models;
+﻿using PasswordSafe.WPF.Models;
 using PasswordSafe.WPF.Services;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Data;
 
 namespace PasswordSafe.WPF.Views
 {
@@ -24,10 +26,26 @@ namespace PasswordSafe.WPF.Views
 
         private void LoadEntries()
         {
-            _entries = _db.GetAll();
-            EntriesList.ItemsSource = null;
+            // Запоминаем выбранную запись, чтобы восстановить выделение
+            var selectedId = _current?.Id;
+
+            _entries = _db.GetAll(); // здесь уже подставляются актуальные CategoryName
+
+            EntriesList.ItemsSource = null;            // сбрасываем view
             EntriesList.ItemsSource = _entries;
+
+            var view = CollectionViewSource.GetDefaultView(EntriesList.ItemsSource);
+            view.GroupDescriptions.Clear();
+            view.GroupDescriptions.Add(new PropertyGroupDescription("CategoryName"));
+            view.SortDescriptions.Clear();
+            view.SortDescriptions.Add(new SortDescription("CategoryName", ListSortDirection.Ascending));
+            view.SortDescriptions.Add(new SortDescription("Title", ListSortDirection.Ascending));
+
+            // Восстанавливаем выделение
+            if (selectedId.HasValue)
+                EntriesList.SelectedItem = _entries.FirstOrDefault(x => x.Id == selectedId.Value);
         }
+
 
         private void EntriesList_SelectionChanged(object sender,
             System.Windows.Controls.SelectionChangedEventArgs e)
@@ -47,7 +65,9 @@ namespace PasswordSafe.WPF.Views
             SecretBox.Text = _current.Secret ?? "";
 
             _currentExtras = new ObservableCollection<ExtraData>(_current.Extras);
-            ExtrasGrid.ItemsSource = _currentExtras;
+            ExtrasGrid.ItemsSource = _currentExtras; 
+            CategoryBox.SelectedValue = _current.CategoryId ?? 0;
+
         }
 
         private void Add_Click(object sender, RoutedEventArgs e)
@@ -90,10 +110,21 @@ namespace PasswordSafe.WPF.Views
                 .Where(x => !string.IsNullOrWhiteSpace(x.Key))
                 .ToList();
 
+            // Установка CategoryId ДО первого сохранения
+            var selectedId = (int?)CategoryBox.SelectedValue;
+            if (selectedId == null || selectedId == 0)
+            {
+                _current.CategoryId = null;
+            }
+            else
+            {
+                _current.CategoryId = selectedId;
+            }
+
             _db.Save(_current);
-            LoadEntries();
-            MessageBox.Show("Сохранено");
+            LoadEntries(); // Только после этого обновляем список
         }
+
 
         private void ChangePassword_Click(object sender, RoutedEventArgs e)
         {
@@ -119,6 +150,48 @@ namespace PasswordSafe.WPF.Views
             SecretBox.Text = "";
             ExtrasGrid.ItemsSource = null;
             _current = null;
+        }
+
+        private void ManageCategories_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new CategoryWindow(_db) { Owner = this };
+            win.ShowDialog();
+
+            if (win.HasChanges)
+            {
+                LoadCategories();
+                LoadEntries();
+            }
+        }
+
+
+        private void LoadCategories()
+        {
+            var categories = _db.GetCategories();
+            var list = new List<Category>
+            {
+                new Category { Id = 0, Name = "Без категории" }
+            };
+            list.AddRange(categories);
+
+            var previouslySelected = (int?)CategoryBox.SelectedValue;
+
+            CategoryBox.ItemsSource = list;
+            CategoryBox.DisplayMemberPath = "Name";
+            CategoryBox.SelectedValuePath = "Id";
+
+            // Восстанавливаем выбор, если категория ещё существует
+            if (previouslySelected.HasValue && list.Any(c => c.Id == previouslySelected.Value))
+                CategoryBox.SelectedValue = previouslySelected.Value;
+            else
+                CategoryBox.SelectedValue = 0;
+        }
+
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            LoadCategories();
+            LoadEntries();
         }
     }
 }

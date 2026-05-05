@@ -98,8 +98,9 @@ namespace PasswordSafe.WPF.Views
 
         private void ChangeDbPassword(string oldPwd, string newPwd)
         {
-            // 1. Считываем все записи (расшифровываются старым ключом)
+            // 1. Считываем всё под старым ключом
             var entries = _db.GetAll();
+            var categories = _db.GetCategories();
 
             // 2. Закрываем текущее соединение
             _db.Dispose();
@@ -116,12 +117,39 @@ namespace PasswordSafe.WPF.Views
             var newCrypto = new CryptoService(newPwd, salt);
             _db = new DatabaseService(newPwd, salt, newCrypto);
 
-            // 6. Перезаписываем все записи (зашифруются новым ключом)
+            // 6. Сначала переносим категории и строим маппинг старых Id -> новых Id
+            var categoryIdMap = new Dictionary<int, int>();
+            foreach (var cat in categories)
+            {
+                var oldId = cat.Id;
+                cat.Id = 0; // сброс, чтобы LiteDB сгенерировала новый
+                _db.SaveCategory(cat);
+                categoryIdMap[oldId] = cat.Id; // после Insert LiteDB обновит Id в объекте
+            }
+
+            // 7. Переносим записи, переназначая CategoryId по маппингу
             foreach (var entry in entries)
             {
-                entry.Id = 0; // сбрасываем ID, чтобы LiteDB сгенерировал новый
+                entry.Id = 0;
+
+                // Перепривязываем к новой категории
+                if (entry.CategoryId.HasValue &&
+                    categoryIdMap.TryGetValue(entry.CategoryId.Value, out var newCatId))
+                {
+                    entry.CategoryId = newCatId;
+                }
+                else
+                {
+                    entry.CategoryId = null;
+                }
+
+                // Сбрасываем Id у extras, чтобы они тоже создались заново
+                foreach (var ex in entry.Extras)
+                    ex.Id = 0;
+
                 _db.Save(entry);
             }
         }
+
     }
 }
